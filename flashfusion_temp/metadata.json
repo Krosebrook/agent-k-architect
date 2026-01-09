@@ -1,0 +1,7 @@
+{
+  "name": "FlashFusion Platform Architecture",
+  "description": "Enterprise-grade interactive visualization of the FlashFusion federated stack and urban simulation engine.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

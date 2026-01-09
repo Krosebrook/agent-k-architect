@@ -77,39 +77,55 @@ VERSION: 6.0.1-PROD`;
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isTyping) return;
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isTyping) return;
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'user',
-      content: input,
+      content: trimmedInput,
       timestamp: new Date().toLocaleTimeString(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => {
+      const next = [...prev, userMessage];
+      // Keep last 100 messages to prevent performance degradation
+      return next.length > 100 ? next.slice(next.length - 100) : next;
+    });
+    
     setInput('');
     setIsTyping(true);
 
-    if (input.startsWith('/')) {
-      const result = await handleCommand(input);
-      if (result) {
+    if (trimmedInput.startsWith('/')) {
+      try {
+        const result = await handleCommand(trimmedInput);
+        if (result) {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            role: 'system',
+            content: result,
+            timestamp: new Date().toLocaleTimeString(),
+          }]);
+        }
+      } catch (err: any) {
         setMessages(prev => [...prev, {
-          id: Date.now().toString(),
+          id: crypto.randomUUID(),
           role: 'system',
-          content: result,
+          content: `COMMAND_ERROR: ${err.message || 'Unknown protocol failure.'}`,
           timestamp: new Date().toLocaleTimeString(),
         }]);
+      } finally {
+        setIsTyping(false);
       }
-      setIsTyping(false);
       return;
     }
 
     try {
-      const securityCheck = await geminiService.analyzeSystemPrompt(input);
+      const securityCheck = await geminiService.analyzeSystemPrompt(trimmedInput);
       
       if (securityCheck.securityLevel === 'MALICIOUS') {
         setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'system',
           content: `SECURITY ALERT: ${securityCheck.reasoning}`,
           timestamp: new Date().toLocaleTimeString(),
@@ -118,25 +134,28 @@ VERSION: 6.0.1-PROD`;
         return;
       }
 
-      const history = messages.map(m => ({
-        role: m.role === 'assistant' ? 'model' : m.role,
-        parts: [{ text: m.content }]
-      })).filter(h => h.role !== 'system');
+      const history = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+          role: m.role === 'assistant' ? 'model' : m.role,
+          parts: [{ text: m.content }]
+        }))
+        .slice(-20); // Only send last 20 messages for context efficiency
 
-      const response = await geminiService.chatWithGrounding(input, history);
-      const text = response.response.candidates[0].content.parts[0].text;
+      const response = await geminiService.chatWithGrounding(trimmedInput, history);
+      const text = response.response?.candidates?.[0]?.content?.parts?.[0]?.text;
       
       setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         role: 'assistant',
-        content: text || "No response received.",
+        content: text || "Neural link stable, but no data returned. Retransmit?",
         timestamp: new Date().toLocaleTimeString()
       }]);
     } catch (err: any) {
       setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         role: 'system',
-        content: `Error: ${err.message || 'Connection failure.'}`,
+        content: `UPLINK_FAILURE: ${err.message || 'Connection timeout.'}`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } finally {

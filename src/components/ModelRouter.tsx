@@ -135,17 +135,27 @@ export const ModelRouter: React.FC = () => {
         const result = await blink.db.routing_rules.list({
           where: { user_id: user.id }
         });
-        setRules(result.map((r: any) => ({
-          id: r.id,
-          name: r.name,
-          provider: r.provider,
-          costThreshold: r.cost_threshold,
-          latencyLimit: r.latency_limit,
-          active: Number(r.active) === 1,
-          tools: JSON.parse(r.tools || '[]')
-        })));
+        setRules(result.map((r: any) => {
+          let parsedTools = [];
+          try {
+            parsedTools = JSON.parse(r.tools || '[]');
+          } catch (e) {
+            console.error('Failed to parse tools for rule:', r.id);
+          }
+          
+          return {
+            id: r.id,
+            name: r.name || 'UNNAMED_RULE',
+            provider: r.provider || ModelProvider.GEMINI,
+            costThreshold: Number(r.cost_threshold) || 0,
+            latencyLimit: Number(r.latency_limit) || 0,
+            active: Number(r.active) === 1,
+            tools: Array.isArray(parsedTools) ? parsedTools : []
+          };
+        }));
       } catch (e) {
         console.error("Failed to fetch routing rules", e);
+        toast.error("Failed to synchronize routing directives.");
       } finally {
         setLoading(false);
       }
@@ -156,15 +166,30 @@ export const ModelRouter: React.FC = () => {
 
   const handleAddRule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newRule.name || !user) return;
+    if (!newRule.name?.trim() || !user) {
+      toast.error('Directive name is required.');
+      return;
+    }
+
+    const costThreshold = Number(newRule.costThreshold);
+    const latencyLimit = Number(newRule.latencyLimit);
+
+    if (isNaN(costThreshold) || costThreshold < 0) {
+      toast.error('Invalid cost threshold.');
+      return;
+    }
+    if (isNaN(latencyLimit) || latencyLimit < 0) {
+      toast.error('Invalid latency limit.');
+      return;
+    }
 
     const ruleId = crypto.randomUUID();
     const rule: CustomRoutingRule = {
       id: ruleId,
-      name: newRule.name as string,
+      name: newRule.name.trim(),
       provider: newRule.provider as string,
-      costThreshold: Number(newRule.costThreshold),
-      latencyLimit: Number(newRule.latencyLimit),
+      costThreshold,
+      latencyLimit,
       active: newRule.active ?? true,
       tools: newRule.tools || []
     };
@@ -191,9 +216,9 @@ export const ModelRouter: React.FC = () => {
         tools: []
       });
       toast.success('Routing rule committed');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error creating rule:', e);
-      toast.error('Failed to commit rule');
+      toast.error(e.message || 'Failed to commit rule');
     }
   };
 

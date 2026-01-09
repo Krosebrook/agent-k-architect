@@ -34,23 +34,41 @@ export const useProfile = () => {
 
         if (result.length > 0) {
           const data = result[0];
+          let preferences = DEFAULT_PROFILE.preferences;
+          try {
+            if (data.preferences) {
+              preferences = JSON.parse(data.preferences);
+            }
+          } catch (e) {
+            console.error('Invalid preferences format in DB, falling back to defaults');
+          }
+
           setProfile({
             name: data.name || DEFAULT_PROFILE.name,
             role: data.role || DEFAULT_PROFILE.role,
-            preferences: JSON.parse(data.preferences || JSON.stringify(DEFAULT_PROFILE.preferences))
+            preferences
           });
         } else {
           // Create initial profile
-          await blink.db.profiles.create({
+          const initialProfile = {
             id: crypto.randomUUID(),
             user_id: user.id,
             name: user.displayName || DEFAULT_PROFILE.name,
             role: DEFAULT_PROFILE.role,
             preferences: JSON.stringify(DEFAULT_PROFILE.preferences)
+          };
+          
+          await blink.db.profiles.create(initialProfile);
+          
+          setProfile({
+            name: initialProfile.name,
+            role: initialProfile.role,
+            preferences: DEFAULT_PROFILE.preferences
           });
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
+        toast.error('Identity sync failure. Using local cache.');
       } finally {
         setLoading(false);
       }

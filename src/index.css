@@ -49,6 +49,21 @@
     --font-mono: 'IBM Plex Mono', monospace;
 
     --radius: 0.75rem;
+
+    /* FlashFusion Brand Colors */
+    --fusion-bolt: 0 100% 71%;
+    --nobel-gold: 46 65% 52%;
+    --stone-50: 24 20% 95%;
+    --stone-100: 24 15% 90%;
+    --stone-200: 24 10% 80%;
+    --stone-300: 24 10% 70%;
+    --stone-400: 24 10% 60%;
+    --stone-500: 24 10% 50%;
+    --stone-600: 24 10% 40%;
+    --stone-700: 24 10% 30%;
+    --stone-800: 24 10% 20%;
+    --stone-900: 24 10% 10%;
+    --stone-950: 24 10% 5%;
   }
 
   .dark {

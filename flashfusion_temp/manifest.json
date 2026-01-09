@@ -1,0 +1,34 @@
+{
+  "name": "FlashFusion Federated Architecture",
+  "short_name": "FlashFusion",
+  "description": "Enterprise-grade interactive visualization of the FlashFusion federated stack.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0c0a09",
+  "theme_color": "#FF6B6B",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/9194/9194881.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/9194/9194881.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities", "infrastructure"],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&q=80&w=1000",
+      "sizes": "1000x600",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Architectural Topology View"
+    }
+  ]
+}

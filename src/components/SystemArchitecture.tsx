@@ -28,6 +28,7 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
   const [isGenerating, setIsGenerating] = useState(false);
   const [blueprint, setBlueprint] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [error, setError] = useState<string | null>(null);
   
   const categories = ['All', 'SaaS', 'AI', 'Fintech', 'Edge', 'Data', 'Security', 'DevOps'];
   const filteredBlueprints = activeCategory === 'All' 
@@ -45,11 +46,13 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
     const finalIntent = pIntent || intent;
     if (!finalIntent.trim() || isGenerating) return;
     setIsGenerating(true);
+    setError(null);
     try {
       const result = await geminiService.generateBlueprint(finalIntent);
       setBlueprint(result);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || "Synthesis engine malfunction. Please try another directive.");
     } finally {
       setIsGenerating(false);
     }
@@ -147,6 +150,23 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
         </div>
 
         <div className="lg:col-span-8">
+          {error && (
+            <div className="mb-6 p-6 bg-destructive/10 border border-destructive/20 rounded-[2rem] animate-in slide-in-from-top-4 flex items-center justify-between group">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center text-destructive">
+                  <ShieldAlert size={20} />
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black text-destructive uppercase tracking-widest">Synthesis Failure</h4>
+                  <p className="text-xs text-foreground font-mono italic">{error}</p>
+                </div>
+              </div>
+              <button onClick={() => setError(null)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors">
+                <X size={16} className="text-destructive" />
+              </button>
+            </div>
+          )}
+
           {isGenerating ? (
             <div className="h-full min-h-[600px] bg-secondary/20 border border-border rounded-[3rem] flex flex-col items-center justify-center p-20 text-center animate-pulse">
               <div className="w-24 h-24 border-4 border-primary border-t-transparent rounded-full animate-spin mb-8 shadow-glow"></div>

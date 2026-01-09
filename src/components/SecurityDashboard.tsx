@@ -21,6 +21,7 @@ export const SecurityDashboard: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<SecurityLog | null>(null);
   const [isTroubleshooting, setIsTroubleshooting] = useState(false);
   const [resolutionData, setResolutionData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [logs, setLogs] = useState<SecurityLog[]>([
     {
@@ -56,11 +57,13 @@ export const SecurityDashboard: React.FC = () => {
     setSelectedLog(log);
     setIsTroubleshooting(true);
     setResolutionData(null);
+    setError(null);
     try {
       const data = await geminiService.troubleshootIncident(log);
       setResolutionData(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || "Forensic node failure. Analysis aborted.");
     } finally {
       setIsTroubleshooting(false);
     }
@@ -178,6 +181,24 @@ export const SecurityDashboard: React.FC = () => {
                 <h2 className="text-4xl font-black text-foreground uppercase italic tracking-tighter">Deliverable Workbench</h2>
                 <p className="text-muted-foreground mt-4 font-mono text-sm">Target Incident: {selectedLog.id} // Generating Fix Protocol...</p>
               </div>
+
+              {error && (
+                <div className="p-8 bg-destructive/10 border border-destructive/20 rounded-[2rem] flex items-center gap-6 animate-in slide-in-from-top-4">
+                   <div className="w-16 h-16 rounded-2xl bg-destructive/20 flex items-center justify-center text-destructive shrink-0">
+                     <ShieldAlert size={32} />
+                   </div>
+                   <div>
+                     <h3 className="text-xl font-black text-destructive uppercase tracking-tighter">Forensic Engine Error</h3>
+                     <p className="text-sm text-foreground font-mono mt-1 italic">{error}</p>
+                     <button 
+                       onClick={() => handleTroubleshoot(selectedLog)}
+                       className="mt-4 px-6 py-2 bg-destructive text-destructive-foreground text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-destructive/80 transition-all"
+                     >
+                       Retry Forensic Scan
+                     </button>
+                   </div>
+                </div>
+              )}
 
               {isTroubleshooting ? (
                 <div className="py-20 flex flex-col items-center justify-center space-y-4">
