@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { SecurityLog } from '../types';
 import { geminiService } from '../lib/geminiService';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   ShieldAlert, 
   GitPullRequest, 
@@ -13,15 +14,18 @@ import {
   ShieldCheck, 
   History,
   FileCode,
-  ArrowRight
+  ArrowRight,
+  LogIn
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export const SecurityDashboard: React.FC = () => {
+  const { user, login } = useAuth();
   const [selectedLog, setSelectedLog] = useState<SecurityLog | null>(null);
   const [isTroubleshooting, setIsTroubleshooting] = useState(false);
   const [resolutionData, setResolutionData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const [logs, setLogs] = useState<SecurityLog[]>([
     {
@@ -54,16 +58,27 @@ export const SecurityDashboard: React.FC = () => {
   ]);
 
   const handleTroubleshoot = async (log: SecurityLog) => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+    
     setSelectedLog(log);
     setIsTroubleshooting(true);
     setResolutionData(null);
     setError(null);
+    setShowAuthPrompt(false);
     try {
       const data = await geminiService.troubleshootIncident(log);
       setResolutionData(data);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Forensic node failure. Analysis aborted.");
+      if (err.message?.includes('401') || err.message?.includes('Authentication')) {
+        setShowAuthPrompt(true);
+        setError("Authentication required for forensic analysis.");
+      } else {
+        setError(err.message || "Forensic node failure. Analysis aborted.");
+      }
     } finally {
       setIsTroubleshooting(false);
     }
@@ -113,6 +128,30 @@ export const SecurityDashboard: React.FC = () => {
       </div>
 
       <div className="bg-secondary/30 border border-border rounded-[2.5rem] overflow-hidden shadow-2xl backdrop-blur-sm">
+        {showAuthPrompt && (
+          <div className="m-8 p-6 bg-primary/10 border border-primary/20 rounded-[2rem] animate-in slide-in-from-top-4 flex items-center justify-between group">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                <LogIn size={20} />
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Authentication Required</h4>
+                <p className="text-xs text-foreground font-mono italic">Sign in to access forensic troubleshooting tools.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={login}
+                className="px-4 py-2 bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider rounded-xl hover:bg-primary/90 transition-colors"
+              >
+                Sign In
+              </button>
+              <button onClick={() => setShowAuthPrompt(false)} className="p-2 hover:bg-primary/10 rounded-lg transition-colors">
+                <X size={16} className="text-primary" />
+              </button>
+            </div>
+          </div>
+        )}
         <div className="px-8 py-6 border-b border-border flex justify-between items-center bg-background/20">
           <div>
             <h4 className="font-black text-foreground uppercase italic tracking-tighter">Actionable Security Logs</h4>

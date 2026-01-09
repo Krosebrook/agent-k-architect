@@ -51,6 +51,10 @@ export class GeminiService {
       return object;
     } catch (e: any) {
       console.error("Blueprint generation failed:", e);
+      // Handle auth errors
+      if (e.code === 'HTTP 401' || e.status === 401 || e.message?.includes('401') || e.message?.includes('Authentication')) {
+        throw new Error("Authentication required. Please sign in to access synthesis capabilities.");
+      }
       if (e.message?.includes("rate limit")) {
         throw new Error("Architecture synthesis engine is temporarily busy. Please retry in a moment.");
       }

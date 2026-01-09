@@ -2,6 +2,7 @@
 import React from 'react';
 import { ViewState } from '../App';
 import { UserProfile } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   LayoutDashboard, 
   PenTool, 
@@ -11,7 +12,9 @@ import {
   Terminal, 
   Settings, 
   ChevronLeft, 
-  Menu 
+  Menu,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -24,6 +27,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOpen, toggleSidebar, profile }) => {
+  const { user, login, logout } = useAuth();
   const navItems = [
     { id: 'architecture', icon: LayoutDashboard, label: 'Architecture' },
     { id: 'designer', icon: PenTool, label: 'Product Designer' },
@@ -73,17 +77,41 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOp
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3">
-           <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary text-xs shrink-0">
-             {profile.name.charAt(0)}
-           </div>
-           {isOpen && (
-             <div className="flex flex-col overflow-hidden">
-               <span className="text-[10px] font-black text-foreground uppercase tracking-tighter truncate">{profile.name}</span>
-               <span className="text-[8px] text-accent uppercase font-black">{profile.role}</span>
-             </div>
-           )}
-        </div>
+        {user ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+               <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary text-xs shrink-0">
+                 {user.displayName?.charAt(0) || user.email?.charAt(0) || 'U'}
+               </div>
+               {isOpen && (
+                 <div className="flex flex-col overflow-hidden">
+                   <span className="text-[10px] font-black text-foreground uppercase tracking-tighter truncate">{user.displayName || user.email?.split('@')[0]}</span>
+                   <span className="text-[8px] text-accent uppercase font-black">Authenticated</span>
+                 </div>
+               )}
+            </div>
+            {isOpen && (
+              <button 
+                onClick={logout}
+                className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-lg hover:bg-destructive/10"
+                title="Log Out"
+              >
+                <LogOut size={16} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <button 
+            onClick={login}
+            className={cn(
+              "w-full flex items-center gap-4 p-3 rounded-xl transition-all bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20",
+              !isOpen && "justify-center"
+            )}
+          >
+            <LogIn size={20} />
+            {isOpen && <span className="text-sm font-black uppercase tracking-widest italic">Sign In</span>}
+          </button>
+        )}
       </div>
     </aside>
   );

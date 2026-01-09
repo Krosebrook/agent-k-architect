@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { geminiService } from '../lib/geminiService';
 import { TOP_50_BLUEPRINTS } from '../constants';
 import { UserProfile } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Cpu, 
   Layers, 
@@ -15,7 +16,8 @@ import {
   Table,
   ShieldCheck,
   Compass,
-  ArrowRight
+  ArrowRight,
+  LogIn
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -24,11 +26,13 @@ interface SystemArchitectureProps {
 }
 
 export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile }) => {
+  const { user, login } = useAuth();
   const [intent, setIntent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [blueprint, setBlueprint] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [error, setError] = useState<string | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   
   const categories = ['All', 'SaaS', 'AI', 'Fintech', 'Edge', 'Data', 'Security', 'DevOps'];
   const filteredBlueprints = activeCategory === 'All' 
@@ -45,14 +49,28 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
   const handleSynthesize = async (pIntent?: string) => {
     const finalIntent = pIntent || intent;
     if (!finalIntent.trim() || isGenerating) return;
+    
+    // Check authentication before calling AI
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+    
     setIsGenerating(true);
     setError(null);
+    setShowAuthPrompt(false);
     try {
       const result = await geminiService.generateBlueprint(finalIntent);
       setBlueprint(result);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Synthesis engine malfunction. Please try another directive.");
+      // Check for auth errors
+      if (err.message?.includes('401') || err.message?.includes('Authentication') || err.message?.includes('auth')) {
+        setShowAuthPrompt(true);
+        setError("Authentication required. Please sign in to use the synthesis engine.");
+      } else {
+        setError(err.message || "Synthesis engine malfunction. Please try another directive.");
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -150,7 +168,32 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
         </div>
 
         <div className="lg:col-span-8">
-          {error && (
+          {showAuthPrompt && (
+            <div className="mb-6 p-6 bg-primary/10 border border-primary/20 rounded-[2rem] animate-in slide-in-from-top-4 flex items-center justify-between group">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                  <LogIn size={20} />
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Authentication Required</h4>
+                  <p className="text-xs text-foreground font-mono italic">Sign in to access AI-powered synthesis features.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={login}
+                  className="px-4 py-2 bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider rounded-xl hover:bg-primary/90 transition-colors"
+                >
+                  Sign In
+                </button>
+                <button onClick={() => setShowAuthPrompt(false)} className="p-2 hover:bg-primary/10 rounded-lg transition-colors">
+                  <X size={16} className="text-primary" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {error && !showAuthPrompt && (
             <div className="mb-6 p-6 bg-destructive/10 border border-destructive/20 rounded-[2rem] animate-in slide-in-from-top-4 flex items-center justify-between group">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center text-destructive">

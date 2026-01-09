@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { geminiService } from '../lib/geminiService';
 import { TechStack, Manifest } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Lightbulb, 
   Wand2, 
@@ -15,7 +16,9 @@ import {
   GitBranch, 
   Copy,
   ChevronRight,
-  Info
+  Info,
+  LogIn,
+  X
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { toast } from 'react-hot-toast';
@@ -34,6 +37,7 @@ const DATA_CONSISTENCY = ['Eventual Consistency', 'Strong ACID', 'Causal Consist
 const ERROR_PATTERNS = ['Graceful Degradation', 'Circuit Breaker', 'Retry with Backoff', 'Fail-Fast (Panic)', 'Safe-Mode Fallback'];
 
 export const ProductDesigner: React.FC = () => {
+  const { user, login } = useAuth();
   const [intent, setIntent] = useState('');
   const [stack, setStack] = useState<TechStack>({
     framework: FRAMEWORKS[0],
@@ -52,18 +56,32 @@ export const ProductDesigner: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [activeTab, setActiveTab] = useState<'manifest' | 'aiaas' | 'scaffold' | 'docs' | 'ops'>('manifest');
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const handleSynthesize = async () => {
     if (!intent.trim() || isGenerating) return;
+
+    if (!user) {
+      setShowAuthPrompt(true);
+      toast.error('Authentication required');
+      return;
+    }
+
     setIsGenerating(true);
+    setShowAuthPrompt(false);
     try {
       const result = await geminiService.synthesizeDeepManifest({ ...stack, intent });
       setManifest(result);
       setActiveTab('manifest');
       toast.success('Product artifacts synthesized');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Synthesis failed');
+      if (err.message?.includes('401') || err.message?.includes('Authentication')) {
+        setShowAuthPrompt(true);
+        toast.error('Session expired. Please sign in.');
+      } else {
+        toast.error('Synthesis failed');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -168,6 +186,31 @@ export const ProductDesigner: React.FC = () => {
         </div>
 
         <div className="lg:col-span-8">
+          {showAuthPrompt && (
+            <div className="mb-8 p-6 bg-primary/10 border border-primary/20 rounded-[2rem] animate-in slide-in-from-top-4 flex items-center justify-between group">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                  <LogIn size={20} />
+                </div>
+                <div>
+                  <h4 className="text-[10px] font-black text-primary uppercase tracking-widest">Authentication Required</h4>
+                  <p className="text-xs text-foreground font-mono italic">Sign in to access deep product synthesis tools.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={login}
+                  className="px-4 py-2 bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-wider rounded-xl hover:bg-primary/90 transition-colors"
+                >
+                  Sign In
+                </button>
+                <button onClick={() => setShowAuthPrompt(false)} className="p-2 hover:bg-primary/10 rounded-lg transition-colors">
+                  <X size={16} className="text-primary" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {isGenerating ? (
             <div className="h-full min-h-[600px] bg-secondary/20 border border-border rounded-[3rem] p-20 flex flex-col items-center justify-center text-center animate-pulse">
               <div className="w-32 h-32 border-4 border-primary border-t-transparent rounded-full animate-spin mb-10 shadow-glow"></div>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { geminiService } from '../lib/geminiService';
 import { ChatMessage, UserProfile } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Terminal, 
   ArrowUp, 
@@ -11,7 +12,8 @@ import {
   User, 
   HelpCircle, 
   XCircle,
-  Command
+  Command,
+  LogIn
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -20,6 +22,7 @@ interface TerminalProps {
 }
 
 export const ChatTerminal: React.FC<TerminalProps> = ({ profile }) => {
+  const { user, login } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -79,6 +82,20 @@ VERSION: 6.0.1-PROD`;
     e.preventDefault();
     const trimmedInput = input.trim();
     if (!trimmedInput || isTyping) return;
+
+    // Check authentication before AI calls (not for local commands like /help, /clear, /whoami, /system)
+    const isLocalCommand = trimmedInput.startsWith('/') && 
+      ['/help', '/clear', '/whoami', '/system'].some(cmd => trimmedInput.toLowerCase().startsWith(cmd));
+    
+    if (!user && !isLocalCommand) {
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        role: 'system',
+        content: 'AUTHENTICATION_REQUIRED: Sign in to access AI-powered chat features.',
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+      return;
+    }
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -222,6 +239,19 @@ VERSION: 6.0.1-PROD`;
       </div>
 
       <form onSubmit={handleSendMessage} className="p-4 bg-secondary/30 border-t border-border backdrop-blur-md">
+        {!user && (
+          <div className="mb-3 flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-2">
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Sign in for AI chat features</span>
+            <button 
+              type="button"
+              onClick={login}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <LogIn size={12} />
+              Sign In
+            </button>
+          </div>
+        )}
         <div className="relative group">
           <input
             type="text"
