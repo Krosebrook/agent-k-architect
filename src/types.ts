@@ -16,6 +16,8 @@ export interface UserProfile {
     theme: 'dark' | 'light';
     autoGrounding: boolean;
     terminalStyle: 'vintage' | 'modern';
+    securityStrictness: 'LOW' | 'MEDIUM' | 'HIGH';
+    defaultProvider: ModelProvider;
   };
 }
 

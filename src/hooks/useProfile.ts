@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserProfile } from '../types';
 import { blink } from '../lib/blink';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,7 +10,9 @@ const DEFAULT_PROFILE: UserProfile = {
   preferences: {
     theme: 'dark',
     autoGrounding: true,
-    terminalStyle: 'modern'
+    terminalStyle: 'modern',
+    securityStrictness: 'MEDIUM',
+    defaultProvider: 'GEMINI' as any
   }
 };
 
@@ -77,7 +78,7 @@ export const useProfile = () => {
     fetchProfile();
   }, [user]);
 
-  const updateProfile = async (newProfile: Partial<UserProfile>) => {
+  const updateProfile = useCallback(async (newProfile: Partial<UserProfile>) => {
     if (!user) return;
 
     try {
@@ -96,11 +97,11 @@ export const useProfile = () => {
       console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
     }
-  };
+  }, [user, profile]);
 
-  const updatePreferences = (prefs: Partial<UserProfile['preferences']>) => {
+  const updatePreferences = useCallback((prefs: Partial<UserProfile['preferences']>) => {
     updateProfile({ preferences: { ...profile.preferences, ...prefs } });
-  };
+  }, [updateProfile, profile.preferences]);
 
-  return { profile, setProfile: updateProfile, updatePreferences, loading };
+  return useMemo(() => ({ profile, setProfile: updateProfile, updatePreferences, loading }), [profile, updateProfile, updatePreferences, loading]);
 };

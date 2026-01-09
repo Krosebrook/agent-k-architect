@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { geminiService } from '../lib/geminiService';
 import { TOP_50_BLUEPRINTS } from '../constants';
 import { UserProfile } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { cn } from '../lib/utils';
 import { 
   Cpu, 
   Layers, 
@@ -17,9 +17,15 @@ import {
   ShieldCheck,
   Compass,
   ArrowRight,
-  LogIn
+  LogIn,
+  Save,
+  Archive,
+  Trash2,
+  Wand2,
+  Box
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { blink } from '../lib/blink';
+import { toast } from 'react-hot-toast';
 
 interface SystemArchitectureProps {
   profile?: UserProfile;
@@ -29,12 +35,70 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
   const { user, login } = useAuth();
   const [intent, setIntent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [blueprint, setBlueprint] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [viewMode, setViewMode] = useState<'designer' | 'vault'>('designer');
+  const [savedSystems, setSavedSystems] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   
   const categories = ['All', 'SaaS', 'AI', 'Fintech', 'Edge', 'Data', 'Security', 'DevOps'];
+  
+  const fetchVault = async () => {
+    if (!user) return;
+    try {
+      const result = await blink.db.systems.list({
+        where: { user_id: user.id },
+        orderBy: { created_at: 'desc' }
+      });
+      setSavedSystems(result.map(s => ({
+        ...s,
+        architecture: JSON.parse(s.architecture || '{}')
+      })));
+    } catch (e) {
+      console.error("Vault fetch failed", e);
+    }
+  };
+
+  React.useEffect(() => {
+    if (viewMode === 'vault') {
+      fetchVault();
+    }
+  }, [viewMode, user]);
+
+  const handleSaveToVault = async () => {
+    if (!user || !blueprint) return;
+    setIsSaving(true);
+    try {
+      await blink.db.systems.create({
+        user_id: user.id,
+        name: blueprint.title,
+        description: blueprint.summary,
+        architecture: JSON.stringify(blueprint)
+      });
+      toast.success('Blueprint committed to Archive Vault');
+      setViewMode('vault');
+    } catch (e) {
+      console.error("Vault commit failed", e);
+      toast.error('Vault synchronization failure');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteFromVault = async (id: string) => {
+    if (!user) return;
+    try {
+      await blink.db.systems.delete({
+        where: { id, user_id: user.id }
+      });
+      setSavedSystems(prev => prev.filter(s => s.id !== id));
+      toast.success('System purged from Vault');
+    } catch (e) {
+      toast.error('Purge operation failed');
+    }
+  };
   const filteredBlueprints = activeCategory === 'All' 
     ? TOP_50_BLUEPRINTS 
     : TOP_50_BLUEPRINTS.filter(b => b.category === activeCategory);
@@ -84,7 +148,7 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
             <Cpu className="text-primary" />
             Architecture Ops
           </h2>
-          <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-[0.3em] mt-1">Real-Time Infrastructure Visualization</p>
+          <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-0.3em mt-1">Real-Time Infrastructure Visualization</p>
         </div>
         <div className="flex gap-4">
           <div className="bg-secondary/50 px-4 py-2 rounded-xl border border-border flex items-center gap-3">
@@ -119,20 +183,21 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
 
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
               {filteredBlueprints.map(b => (
-                <button 
-                  key={b.id} 
-                  onClick={() => handleSynthesize(`Architect a production-grade ${b.title} using ${b.tech}. Focus on ${b.intent}`)}
-                  className="w-full bg-background/50 border border-border p-4 rounded-2xl flex items-center gap-4 group hover:border-primary/50 transition-all text-left relative overflow-hidden"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shadow-inner shrink-0 border border-border">
-                    <LayoutDashboard size={18} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[10px] font-black text-foreground uppercase leading-none mb-1 truncate">{b.title}</div>
-                    <div className="text-[8px] text-muted-foreground font-mono truncate">{b.tech}</div>
-                  </div>
-                  <ArrowRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
+                <div key={b.id} className="p-1 border border-border rounded-2xl hover:border-primary/50 transition-all">
+                  <button 
+                    onClick={() => handleSynthesize(`Architect a production-grade ${b.title} using ${b.tech}. Focus on ${b.intent}`)}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-secondary/50 transition-all text-left group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:scale-110 transition-transform">
+                      <i className={`fa-solid ${b.icon}`}></i>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-black text-foreground uppercase tracking-widest truncate">{b.title}</div>
+                      <div className="text-[9px] text-muted-foreground truncate font-mono uppercase tracking-tighter">{b.tech}</div>
+                    </div>
+                    <Wand2 size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -241,11 +306,18 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
                      <Layers className="text-primary" size={16} /> Infrastructure Matrix
                    </h4>
                    <div className="space-y-4">
-                     {blueprint.layers.map((l: any, i: number) => (
-                       <div key={i} className="p-8 bg-background/50 border border-border rounded-[2.5rem] group hover:border-primary/40 transition-all shadow-xl border-l-4 border-l-transparent hover:border-l-primary">
-                         <div className="text-[10px] font-black text-primary uppercase mb-2 tracking-widest">{l.name}</div>
-                         <div className="text-base font-black text-foreground mb-4">{l.tech}</div>
-                         <p className="text-[11px] text-muted-foreground leading-relaxed italic">{l.rationale}</p>
+                     {blueprint.layers.map((layer: any) => (
+                       <div key={layer.name} className="p-8 bg-background/50 border border-border rounded-[2.5rem] group hover:border-primary/40 transition-all shadow-xl border-l-4 border-l-transparent hover:border-l-primary">
+                         <div className="flex items-center gap-4 mb-6">
+                           <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20">
+                             <Box size={24} />
+                           </div>
+                           <div>
+                             <h4 className="text-sm font-black text-foreground uppercase tracking-widest italic">{layer.name}</h4>
+                             <div className="text-[10px] text-primary font-mono uppercase tracking-[0.2em]">{layer.tech}</div>
+                           </div>
+                         </div>
+                         <p className="text-xs text-muted-foreground leading-relaxed italic">{layer.rationale}</p>
                        </div>
                      ))}
                    </div>
@@ -256,8 +328,8 @@ export const SystemArchitecture: React.FC<SystemArchitectureProps> = ({ profile 
                      <Database className="text-accent" size={16} /> Entity Schema (Postgres)
                    </h4>
                    <div className="space-y-4">
-                      {blueprint.dataModel.map((d: any, i: number) => (
-                        <div key={i} className="p-6 bg-background/50 border border-border rounded-3xl font-mono shadow-inner">
+                      {blueprint.dataModel.map((d: any) => (
+                        <div key={d.table} className="p-6 bg-background/50 border border-border rounded-3xl font-mono shadow-inner">
                           <div className="text-[11px] font-black text-accent uppercase mb-4 flex items-center gap-3">
                             <Table size={14} /> {d.table}
                           </div>

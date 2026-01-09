@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ViewState } from '../App';
 import { UserProfile } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,7 +13,10 @@ import {
   ChevronLeft, 
   Menu,
   LogIn,
-  LogOut
+  LogOut,
+  Cpu,
+  Box,
+  Layout
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -28,15 +30,15 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOpen, toggleSidebar, profile }) => {
   const { user, login, logout } = useAuth();
-  const navItems = [
-    { id: 'architecture', icon: LayoutDashboard, label: 'Architecture' },
-    { id: 'designer', icon: PenTool, label: 'Product Designer' },
-    { id: 'aiaas', icon: CloudUpload, label: 'AIaaS Console' },
-    { id: 'routing', icon: Route, label: 'Model Router' },
-    { id: 'security', icon: ShieldCheck, label: 'Security Guard' },
-    { id: 'terminal', icon: Terminal, label: 'Terminal' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
-  ] as { id: ViewState, icon: any, label: string }[];
+  const navItems = useMemo(() => [
+    { id: 'architecture', icon: Cpu, label: 'Ops' },
+    { id: 'aiaas', icon: Box, label: 'AIaaS' },
+    { id: 'routing', icon: Route, label: 'Routing' },
+    { id: 'security', icon: ShieldCheck, label: 'Guard' },
+    { id: 'designer', icon: Layout, label: 'Studio' },
+    { id: 'terminal', icon: Terminal, label: 'Link' },
+    { id: 'settings', icon: Settings, label: 'Config' }
+  ] as { id: ViewState, icon: any, label: string }[], []);
 
   return (
     <aside className={cn(

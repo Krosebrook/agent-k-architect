@@ -1,4 +1,3 @@
-
 import React, { useState, Suspense, lazy } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { MetricsGrid } from './components/MetricsGrid';
@@ -15,6 +14,13 @@ const ProductDesigner = lazy(() => import('./components/ProductDesigner').then(m
 const AIaaSConsole = lazy(() => import('./components/AIaaSConsole').then(m => ({ default: m.AIaaSConsole })));
 
 export type ViewState = 'architecture' | 'routing' | 'security' | 'terminal' | 'designer' | 'aiaas' | 'settings';
+
+const LoadingFallback = () => (
+  <div className="h-full flex flex-col items-center justify-center p-20 animate-pulse">
+    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6"></div>
+    <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] font-mono">Initializing Node Telemetry...</span>
+  </div>
+);
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewState>('architecture');
@@ -76,13 +82,6 @@ const App: React.FC = () => {
       default: return null;
     }
   };
-
-  const LoadingFallback = () => (
-    <div className="h-full flex flex-col items-center justify-center p-20 animate-pulse">
-      <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-6"></div>
-      <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] font-mono">Initializing Node Telemetry...</span>
-    </div>
-  );
 
   return (
     <div className={`flex h-screen overflow-hidden bg-background text-foreground font-sans`}>
